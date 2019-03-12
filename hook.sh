@@ -146,17 +146,17 @@ validate_commit_message() {
   test ${#COMMIT_MSG_LINES[@]} -lt 1 || test -z "${COMMIT_MSG_LINES[1]}"
   test $? -eq 0 || add_warning 2 "Separate subject from body with a blank line"
 
-  # 2. Limit the subject line to 50 characters
+  # 2. Limit the subject line to 72 characters
   # ------------------------------------------------------------------------------
 
-  test "${#COMMIT_SUBJECT}" -le 50
-  test $? -eq 0 || add_warning 1 "Limit the subject line to 50 characters (${#COMMIT_SUBJECT} chars)"
+  test "${#COMMIT_SUBJECT}" -le 72
+  test $? -eq 0 || add_warning 1 "Limit the subject line to 72 characters (${#COMMIT_SUBJECT} chars)"
 
-  # 3. Capitalize the subject line
+  # 3. Capitalize the subject line (checking types or project markers is well enough)
   # ------------------------------------------------------------------------------
 
-  [[ ${COMMIT_SUBJECT} =~ ^[[:blank:]]*([[:upper:]]{1}[[:lower:]]*|[[:digit:]]+)([[:blank:]]|[[:punct:]]|$) ]]
-  test $? -eq 0 || add_warning 1 "Capitalize the subject line"
+  # [[ ${COMMIT_SUBJECT} =~ ^[[:blank:]]*([[:upper:]]{1}[[:lower:]]*|[[:digit:]]+)([[:blank:]]|[[:punct:]]|$) ]]
+  # test $? -eq 0 || add_warning 1 "Capitalize the subject line"
 
   # 4. Do not end the subject line with a period
   # ------------------------------------------------------------------------------
@@ -263,6 +263,24 @@ validate_commit_message() {
 
   [[ ${COMMIT_SUBJECT} =~ ^[[:blank:]]+ ]]
   test $? -eq 1 || add_warning 1 "Do not start the subject line with whitespace"
+
+  # 10. Should either have a type or project markers
+  # ------------------------------------------------------------------------------
+  [[ ${COMMIT_SUBJECT} =~ ^\[[[:digit:]]{4,6}\][[:blank:]]{1}(\[[[:digit:]]{4,6}\][[:blank:]]{1})*[[:alnum:]] ]]
+  test $? -eq 0 && has_project_markers=1
+
+  SUPPORTED_TYPES_WHITELIST=(
+    Src          Fix          Style
+    Doc          Chore        AMI
+  )
+  for WHITELIST_WORD in "${SUPPORTED_TYPES_WHITELIST[@]}"; do
+    [[ ${COMMIT_SUBJECT} =~ ^[[:blank:]]*$WHITELIST_WORD:[[:blank:]]{1} ]]
+    test $? -eq 0 && has_type=1 && break
+  done
+
+  if [[ $has_project_markers -eq 0 ]] && [[ $has_type -eq 0 ]]; then
+    add_warning 1 "Should either have a type or project markers"
+  fi
 }
 
 #
